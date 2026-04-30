@@ -2,18 +2,23 @@
 
 This repository tracks a research experiment: adding CGAL-inspired modifications to [tbp.monty](https://github.com/thousandbrainsproject/tbp.monty) and measuring whether they produce empirical advantages over baseline Monty on continual-learning, noise-robustness, and few-shot tasks.
 
-## 🎯 Current Status: Ready for Monty Integration
+> **🔗 Live integration**: the CGAL-augmented Monty fork lives at
+> [`MCGPPeters/tbp.monty` branch `cgal/main`](https://github.com/MCGPPeters/tbp.monty/tree/cgal/main).
+> See [MONTY_COMPARISON_RESULTS.md](MONTY_COMPARISON_RESULTS.md) for the
+> first end-to-end baseline-vs-CGAL comparison.
+
+## 🎯 Current Status: Integrated into a Monty fork
 
 **✅ Completed:**
 - All 4 CGAL mechanisms implemented and tested (Issues #2-5)
-- 126 unit tests, all passing
-- Comprehensive documentation (75+ pages)
-- Experiment infrastructure designed (Issue #6)
-- Results writeup with honest assessment (Issue #7)
+- 126 unit tests in this repo, all passing
+- Vendored into [MCGPPeters/tbp.monty @ cgal/main](https://github.com/MCGPPeters/tbp.monty/tree/cgal/main) with 16 additional integration tests passing
+- Real dream / salience-replay phase wired into `EvidenceGraphLM.post_episode`
+- Synthetic baseline-vs-CGAL comparison harness ([experiments/monty_cgal_comparison.py](experiments/monty_cgal_comparison.py))
 
-**📍 Next Step:** Issue #1 - Fork tbp.monty and integrate CGAL mechanisms
+**📍 Next Step:** Run on the real Monty YCB benchmarks (blocked locally on `habitat-sim` build)
 
-**👉 Start Here:** [MONTY_INTEGRATION_QUICKSTART.md](MONTY_INTEGRATION_QUICKSTART.md) (5-minute overview)
+**👉 Start Here:** [MONTY_COMPARISON_RESULTS.md](MONTY_COMPARISON_RESULTS.md) for the latest results, or [MONTY_INTEGRATION_QUICKSTART.md](MONTY_INTEGRATION_QUICKSTART.md) for the original integration guide.
 
 ## Overview
 
