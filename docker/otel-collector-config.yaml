@@ -1,0 +1,53 @@
+# OpenTelemetry Collector config for the CGAL/Monty benchmark stack.
+# - Receives OTLP/gRPC + HTTP from the monty container.
+# - Logs everything at debug verbosity to stdout (visible via
+#   `docker compose logs otel-collector`).
+# - Persists a JSON copy under ./otel-out/ for later analysis.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+exporters:
+  debug:
+    verbosity: detailed
+  file/traces:
+    path: /var/log/otel/traces.jsonl
+    rotation:
+      max_megabytes: 50
+      max_days: 7
+  file/metrics:
+    path: /var/log/otel/metrics.jsonl
+    rotation:
+      max_megabytes: 50
+      max_days: 7
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug, file/traces]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug, file/metrics]
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888

@@ -1,0 +1,68 @@
+name: cgal-monty
+
+# Podman-compose variant of docker-compose.yml.
+#
+# Differences from the Docker version:
+#   - `:z` SELinux relabel suffix on bind mounts so rootless podman on
+#     SELinux hosts (Fedora, RHEL, etc.) can read/write them.
+#   - `depends_on` uses the short list form — `condition: service_started`
+#     is silently ignored by older podman-compose releases.
+#   - Healthcheck uses `CMD-SHELL` so it works on the slimmer
+#     `otel-collector-contrib` images that ship without `wget`.
+#   - `userns_mode: keep-id` keeps file ownership sane for rootless
+#     podman so files written into the bind-mounted ./logs and
+#     ./otel-out are owned by your host user, not root.
+#
+# Run with:
+#   podman-compose -f podman-compose.yml up --build
+#   SUITE=noise podman-compose -f podman-compose.yml up
+#
+services:
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.107.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    userns_mode: keep-id
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro,z
+      - ./otel-out:/var/log/otel:z
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    # No healthcheck: the otel-collector-contrib image is distroless and
+    # ships no shell/curl/wget. depends_on (start order) is enough here —
+    # the OTel SDK in the monty container retries the OTLP endpoint.
+
+  monty:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    image: localhost/cgal-monty:latest
+    userns_mode: keep-id
+    depends_on:
+      - otel-collector
+    environment:
+      OTEL_SERVICE_NAME: monty
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_RESOURCE_ATTRIBUTES: "service.namespace=cgal,service.instance.id=monty-bench"
+      SUITE: ${SUITE:-smoke}
+      EXPERIMENTS: ${EXPERIMENTS:-}
+      RUN_ONLY: ${RUN_ONLY:-both}
+      N_EVAL_EPOCHS: ${N_EVAL_EPOCHS:-}
+    volumes:
+      - ../../tbp.monty:/workspace/monty:z
+      - ..:/workspace/cgal:z
+      - ~/tbp/data:/data:z
+      - ~/tbp/results/monty/pretrained_models:/models:z
+      - ./logs:/logs:z
+      - ./otel-out:/otel-out:z
+      - ./otel_shim.py:/workspace/otel_shim.py:ro,z
+      - ./run_with_otel.py:/workspace/run_with_otel.py:ro,z
+      - ./run_benchmark.sh:/workspace/run_benchmark.sh:ro,z
+      - ./generate_report.py:/workspace/generate_report.py:ro,z
+    working_dir: /workspace/monty
+    command: ["bash", "/workspace/run_benchmark.sh"]

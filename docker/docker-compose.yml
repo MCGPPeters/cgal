@@ -1,0 +1,65 @@
+name: cgal-monty
+
+# Two services:
+#   - otel-collector: receives OTLP/gRPC from the benchmark process,
+#     fans out to stdout (debug) + rotating JSONL files under ./otel-out.
+#   - monty: runs the experiment matrix; OTel SDK ships spans/metrics
+#     to otel-collector:4317.
+#
+# Volumes:
+#   ../../tbp.monty  -> /workspace/monty  (Monty fork; cgal/main branch)
+#   ../             -> /workspace/cgal    (this repo, editable install)
+#   ~/tbp/data      -> /data              (YCB scenes)
+#   ~/tbp/results/monty/pretrained_models -> /models
+#   ./logs          -> /logs              (per-experiment per-arm Monty logs + report)
+#   ./otel-out      -> /otel-out          (collector JSONL, also read by report)
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.107.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./otel-out:/var/log/otel
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133/"]
+      interval: 5s
+      retries: 5
+
+  monty:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    image: cgal-monty:latest
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      OTEL_SERVICE_NAME: monty
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_RESOURCE_ATTRIBUTES: "service.namespace=cgal,service.instance.id=monty-bench"
+      SUITE: ${SUITE:-smoke}            # smoke | noise | full (see run_benchmark.sh)
+      EXPERIMENTS: ${EXPERIMENTS:-}     # explicit override
+      RUN_ONLY: ${RUN_ONLY:-both}       # baseline | cgal | both
+      N_EVAL_EPOCHS: ${N_EVAL_EPOCHS:-} # optional shrink
+    volumes:
+      - ../../tbp.monty:/workspace/monty
+      - ..:/workspace/cgal
+      - ~/tbp/data:/data
+      - ~/tbp/results/monty/pretrained_models:/models
+      - ./logs:/logs
+      - ./otel-out:/otel-out
+      - ./otel_shim.py:/workspace/otel_shim.py:ro
+      - ./run_with_otel.py:/workspace/run_with_otel.py:ro
+      - ./run_benchmark.sh:/workspace/run_benchmark.sh:ro
+      - ./generate_report.py:/workspace/generate_report.py:ro
+    working_dir: /workspace/monty
+    command: ["bash", "/workspace/run_benchmark.sh"]
