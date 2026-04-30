@@ -1,0 +1,395 @@
+{
+  "baseline": {
+    "num_graphs_in_memory": 4,
+    "learned_objects": [
+      "obj_learn",
+      "obj_square",
+      "obj_house",
+      "obj_house3d"
+    ],
+    "correct_matches": 4,
+    "spurious_new_objects": 8,
+    "avg_steps": 5.25,
+    "eval_records": [
+      {
+        "expected": "obj_learn",
+        "detected": "obj_learn",
+        "steps": 4
+      },
+      {
+        "expected": "obj_learn",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_learn",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected": "obj_square",
+        "steps": 20
+      },
+      {
+        "expected": "obj_square",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected": "obj_house",
+        "steps": 10
+      },
+      {
+        "expected": "obj_house",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "obj_house3d",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "new_object4",
+        "steps": 3
+      }
+    ],
+    "cgal_telemetry": {},
+    "multi_lm_records": [
+      {
+        "expected": "obj_learn",
+        "detected_a": "obj_learn",
+        "detected_b": "obj_learn",
+        "steps": 4
+      },
+      {
+        "expected": "obj_learn",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_learn",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "obj_square",
+        "detected_b": "obj_square",
+        "steps": 10
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "obj_house",
+        "detected_b": "obj_house",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "obj_house3d",
+        "detected_b": "obj_house3d",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      }
+    ]
+  },
+  "cgal": {
+    "num_graphs_in_memory": 4,
+    "learned_objects": [
+      "obj_learn",
+      "obj_square",
+      "obj_house",
+      "obj_house3d"
+    ],
+    "correct_matches": 4,
+    "spurious_new_objects": 8,
+    "avg_steps": 5.25,
+    "eval_records": [
+      {
+        "expected": "obj_learn",
+        "detected": "obj_learn",
+        "steps": 4
+      },
+      {
+        "expected": "obj_learn",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_learn",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected": "obj_square",
+        "steps": 20
+      },
+      {
+        "expected": "obj_square",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected": "obj_house",
+        "steps": 10
+      },
+      {
+        "expected": "obj_house",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "obj_house3d",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected": "new_object4",
+        "steps": 3
+      }
+    ],
+    "cgal_telemetry": {
+      "consensus_gating": {
+        "count": 0,
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "last_gating_factor": 1.0,
+      "novelty": {
+        "count": 31,
+        "mean": 0.9615163723600066,
+        "std": 0.07525876592597637,
+        "min": 0.794016275928986,
+        "max": 1.0
+      },
+      "trust": {
+        "count": 0,
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "salience": {
+        "num_patterns": 4,
+        "mean_salience": 0.0,
+        "std_salience": 0.0,
+        "max_salience": 0.0,
+        "min_salience": 0.0,
+        "num_replay_phases": 4
+      },
+      "multi_lm_a": {
+        "consensus_gating": {
+          "count": 48,
+          "mean": 1.0,
+          "std": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "last_gating_factor": 1.0,
+        "novelty": {
+          "count": 31,
+          "mean": 0.9771788216629013,
+          "std": 0.04492511256841453,
+          "min": 0.8823710044140205,
+          "max": 1.0
+        },
+        "trust": {
+          "count": 2,
+          "mean": 1.0,
+          "std": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "salience": {
+          "num_patterns": 4,
+          "mean_salience": 0.0,
+          "std_salience": 0.0,
+          "max_salience": 0.0,
+          "min_salience": 0.0,
+          "num_replay_phases": 4
+        }
+      },
+      "multi_lm_b": {
+        "consensus_gating": {
+          "count": 48,
+          "mean": 1.0,
+          "std": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "last_gating_factor": 1.0,
+        "novelty": {
+          "count": 31,
+          "mean": 0.9771788216629013,
+          "std": 0.04492511256841453,
+          "min": 0.8823710044140205,
+          "max": 1.0
+        },
+        "trust": {
+          "count": 2,
+          "mean": 1.0,
+          "std": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        },
+        "salience": {
+          "num_patterns": 4,
+          "mean_salience": 0.0,
+          "std_salience": 0.0,
+          "max_salience": 0.0,
+          "min_salience": 0.0,
+          "num_replay_phases": 4
+        }
+      }
+    },
+    "multi_lm_records": [
+      {
+        "expected": "obj_learn",
+        "detected_a": "obj_learn",
+        "detected_b": "obj_learn",
+        "steps": 4
+      },
+      {
+        "expected": "obj_learn",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_learn",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "obj_square",
+        "detected_b": "obj_square",
+        "steps": 10
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_square",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "obj_house",
+        "detected_b": "obj_house",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "obj_house3d",
+        "detected_b": "obj_house3d",
+        "steps": 5
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      },
+      {
+        "expected": "obj_house3d",
+        "detected_a": "new_object4",
+        "detected_b": "new_object4",
+        "steps": 3
+      }
+    ]
+  }
+}
