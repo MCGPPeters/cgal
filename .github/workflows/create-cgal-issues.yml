@@ -2,6 +2,11 @@ name: Create CGAL Issues
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - copilot/add-cgal-consensus-gated-learning
+    paths:
+      - .github/workflows/create-cgal-issues.yml
 
 jobs:
   create-labels:
