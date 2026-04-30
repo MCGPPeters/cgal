@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - copilot/add-cgal-consensus-gated-learning
+      - claude/epic-add-consensus-gated-learning
     paths:
       - .github/workflows/create-cgal-issues.yml
 
