@@ -91,9 +91,13 @@ write_files:
       cd /opt
       [ -d cgal ] || git clone --branch "${CGAL_REF}" --depth 1 https://github.com/MCGPPeters/cgal.git
       [ -d tbp.monty ] || git clone --branch "${MONTY_REF}" --depth 1 https://github.com/MCGPPeters/tbp.monty.git
+      mkdir -p /home/${ADMIN_USER}/tbp/data /home/${ADMIN_USER}/tbp/results/monty/pretrained_models
       cd /opt/cgal/docker
-      ./download_ycb.sh
-      SUITE="${SUITE}" ./compose.sh up --build --abort-on-container-exit
+      # Build the monty image first (it has habitat-sim baked in).
+      docker compose -f docker-compose.yml build monty
+      # Download YCB + pretrained models *inside* the image (host has no habitat-sim).
+      docker compose -f docker-compose.yml run --rm --entrypoint bash monty -lc 'micromamba run -n base /workspace/cgal/docker/download_ycb.sh'
+      SUITE="${SUITE}" N_EVAL_EPOCHS="${N_EVAL_EPOCHS}" docker compose -f docker-compose.yml up --abort-on-container-exit
       if [ -n "${RESULTS_SA}" ]; then
         az login --identity
         az storage container create --account-name "${RESULTS_SA}" --name "${RESULTS_CONTAINER}" --auth-mode login || true
