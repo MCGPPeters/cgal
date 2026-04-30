@@ -73,7 +73,7 @@ def run_few_shot_experiment(
             alpha=0.7
         )
         novelty_config = NoveltyDetectionConfig(
-            novelty_detection_enabled=True
+            hypothesis_novelty_detection=True
         )
         trust_config = TrustWeightsConfig(
             learned_trust_weights=True,
