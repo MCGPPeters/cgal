@@ -2,5 +2,6 @@
 
 from .novelty_detection import NoveltyDetector
 from .consensus_gating import ConsensusGatingModule
+from .trust_weights import TrustWeightsModule
 
-__all__ = ["NoveltyDetector", "ConsensusGatingModule"]
+__all__ = ["NoveltyDetector", "ConsensusGatingModule", "TrustWeightsModule"]
