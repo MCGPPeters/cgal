@@ -1,0 +1,237 @@
+name: Create CGAL Issues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh label create "epic"           --color "9A4BAE" --description "Epic issue tracking multiple sub-issues" || true
+          gh label create "experimental"   --color "FF9F00" --description "Experimental work"                       || true
+          gh label create "research"       --color "0075CA" --description "Research work"                           || true
+          gh label create "cgal"           --color "6B3CB3" --description "CGAL framework related"                  || true
+          gh label create "setup"          --color "28A745" --description "Setup and configuration"                 || true
+          gh label create "core-mechanism" --color "D73A4A" --description "Core mechanism implementation"           || true
+          gh label create "experiments"    --color "C5A800" --description "Experiment configuration and harness"    || true
+          gh label create "writeup"        --color "0E8A16" --description "Documentation and writeup"               || true
+          gh label create "priority-1"     --color "B60205" --description "Highest priority"                        || true
+          gh label create "priority-2"     --color "D93F0B" --description "Medium priority"                         || true
+          gh label create "priority-3"     --color "E99695" --description "Lower priority"                          || true
+
+  create-issues:
+    runs-on: ubuntu-latest
+    needs: create-labels
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Epic (parent issue)
+        id: epic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          URL=$(gh issue create \
+            --title "[Epic] CGAL: Add consensus-gated learning, novelty detection, trust weights, and salience-tagged replay to Monty" \
+            --label "epic,experimental,research" \
+            --body-file ".github/issues/00-epic.md")
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created epic issue #$NUMBER"
+
+      - name: Create Issue 1 — Setup
+        id: issue1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            tail -n +2 .github/issues/01-setup.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Setup: Fork tbp.monty, validate environment and baseline reproduction" \
+            --label "cgal,setup,priority-1" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 1 #$NUMBER"
+
+      - name: Create Issue 2 — Consensus-gated plasticity
+        id: issue2
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I1}"
+            tail -n +2 .github/issues/02-consensus-gated-plasticity.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Add consensus-gated plasticity to learning module" \
+            --label "cgal,core-mechanism,priority-1" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 2 #$NUMBER"
+
+      - name: Create Issue 3 — Novelty detection
+        id: issue3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I1} (can proceed in parallel with issue 2)"
+            tail -n +2 .github/issues/03-novelty-detection.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Add novelty detection from hypothesis distribution shape" \
+            --label "cgal,core-mechanism,priority-2" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 3 #$NUMBER"
+
+      - name: Create Issue 4 — Learned trust weights
+        id: issue4
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I1} (can proceed in parallel with issues 2 and 3)"
+            tail -n +2 .github/issues/04-learned-trust-weights.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Add learned trust weights between learning modules" \
+            --label "cgal,core-mechanism,priority-2" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 4 #$NUMBER"
+
+      - name: Create Issue 5 — Salience-tagged replay
+        id: issue5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+          I2: ${{ steps.issue2.outputs.number }}
+          I3: ${{ steps.issue3.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I1}; ideally also #${I2} and #${I3} (uses outputs from those)"
+            tail -n +2 .github/issues/05-salience-tagged-replay.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Add salience-tagged replay during off-line consolidation phases" \
+            --label "cgal,core-mechanism,priority-3" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 5 #$NUMBER"
+
+      - name: Create Issue 6 — Experiment harness
+        id: issue6
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+          I2: ${{ steps.issue2.outputs.number }}
+          I3: ${{ steps.issue3.outputs.number }}
+          I4: ${{ steps.issue4.outputs.number }}
+          I5: ${{ steps.issue5.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I1}; can be done in parallel with #${I2}–#${I5} once the configuration interfaces are stable."
+            tail -n +2 .github/issues/06-experiment-harness.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Build experiment harness for CGAL vs baseline comparison" \
+            --label "cgal,experiments,priority-2" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 6 #$NUMBER"
+
+      - name: Create Issue 7 — Run experiments and writeup
+        id: issue7
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I2: ${{ steps.issue2.outputs.number }}
+          I3: ${{ steps.issue3.outputs.number }}
+          I4: ${{ steps.issue4.outputs.number }}
+          I5: ${{ steps.issue5.outputs.number }}
+          I6: ${{ steps.issue6.outputs.number }}
+        run: |
+          {
+            echo "**Part of epic:** #${EPIC}"
+            echo "**Depends on:** #${I2}, #${I3}, #${I4}, #${I5}, #${I6} — all must be complete."
+            tail -n +2 .github/issues/07-run-experiments-writeup.md
+          } > /tmp/issue-body.md
+          URL=$(gh issue create \
+            --title "[CGAL] Run experiments and produce results writeup" \
+            --label "cgal,experiments,writeup,priority-3" \
+            --body-file /tmp/issue-body.md)
+          NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Created issue 7 #$NUMBER"
+
+      - name: Comment on Epic with sub-issue links
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EPIC: ${{ steps.epic.outputs.number }}
+          I1: ${{ steps.issue1.outputs.number }}
+          I2: ${{ steps.issue2.outputs.number }}
+          I3: ${{ steps.issue3.outputs.number }}
+          I4: ${{ steps.issue4.outputs.number }}
+          I5: ${{ steps.issue5.outputs.number }}
+          I6: ${{ steps.issue6.outputs.number }}
+          I7: ${{ steps.issue7.outputs.number }}
+        run: |
+          {
+            echo "## Sub-issues"
+            echo ""
+            echo "- [ ] #${I1} — Setup: Fork repo, set up environment, validate baseline reproduction"
+            echo "- [ ] #${I2} — Implement consensus-gated plasticity in EvidenceLM"
+            echo "- [ ] #${I3} — Implement hypothesis-distribution novelty detection"
+            echo "- [ ] #${I4} — Implement learned trust weights between LMs"
+            echo "- [ ] #${I5} — Implement salience-tagging and prioritized replay"
+            echo "- [ ] #${I6} — Build experiment harness (continual learning, noise robustness, few-shot)"
+            echo "- [ ] #${I7} — Run experiments, collect results, produce writeup"
+            echo ""
+            echo "**Dependency order:**"
+            echo "- #${I1} must be completed first."
+            echo "- #${I2}, #${I3}, #${I4}, and #${I6} can proceed in parallel after #${I1}."
+            echo "- #${I5} depends on #${I1} and ideally #${I2} and #${I3}."
+            echo "- #${I7} depends on all of #${I2}–#${I6}."
+          } > /tmp/epic-comment.md
+          gh issue comment "${EPIC}" --body-file /tmp/epic-comment.md
