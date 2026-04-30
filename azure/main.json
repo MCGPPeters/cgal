@@ -1,0 +1,292 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "2062794594213008608"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_NC4as_T4_v3",
+      "allowedValues": [
+        "Standard_NC4as_T4_v3",
+        "Standard_NC8as_T4_v3",
+        "Standard_NC6s_v3",
+        "Standard_NV6ads_A10_v5",
+        "Standard_NV12ads_A10_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_D16s_v5"
+      ],
+      "metadata": {
+        "description": "VM size. NC4as_T4_v3 is the cheapest CUDA GPU; D-series for CPU-only."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "cgal",
+      "metadata": {
+        "description": "VM admin username."
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key (paste contents of ~/.ssh/id_*.pub)."
+      }
+    },
+    "useSpot": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Use Spot pricing (much cheaper, can be evicted)."
+      }
+    },
+    "spotMaxPrice": {
+      "type": "int",
+      "defaultValue": -1,
+      "metadata": {
+        "description": "Maximum hourly price for Spot in USD; -1 means up to on-demand price."
+      }
+    },
+    "cgalRef": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "Git ref of MCGPPeters/cgal to clone."
+      }
+    },
+    "montyRef": {
+      "type": "string",
+      "defaultValue": "cgal/main",
+      "metadata": {
+        "description": "Git ref of MCGPPeters/tbp.monty to clone."
+      }
+    },
+    "suite": {
+      "type": "string",
+      "defaultValue": "noise",
+      "allowedValues": [
+        "smoke",
+        "noise",
+        "full"
+      ],
+      "metadata": {
+        "description": "SUITE env var passed to run_benchmark.sh."
+      }
+    },
+    "nEvalEpochs": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional N_EVAL_EPOCHS shrink (empty = use experiment default)."
+      }
+    },
+    "resultsStorageAccount": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional: storage account to receive results (logs + report)."
+      }
+    },
+    "resultsContainer": {
+      "type": "string",
+      "defaultValue": "cgal-results",
+      "metadata": {
+        "description": "Optional: container in the storage account."
+      }
+    }
+  },
+  "variables": {
+    "$fxv#0": "#cloud-config\npackage_update: true\npackage_upgrade: false\npackages:\n  - git\n  - curl\n  - jq\n  - ca-certificates\n  - gnupg\n  - lsb-release\nwrite_files:\n  - path: /etc/profile.d/cgal.sh\n    content: |\n      export CGAL_REF=__CGAL_REF__\n      export MONTY_REF=__MONTY_REF__\n      export SUITE=__SUITE__\n      export N_EVAL_EPOCHS=__N_EVAL_EPOCHS__\n      export RESULTS_SA=__RESULTS_SA__\n      export RESULTS_CONTAINER=__RESULTS_CONTAINER__\n  - path: /usr/local/bin/run-cgal-bench.sh\n    permissions: '0755'\n    content: |\n      #!/usr/bin/env bash\n      set -euxo pipefail\n      source /etc/profile.d/cgal.sh\n      cd /opt\n      [ -d cgal ] || git clone --branch \"${CGAL_REF}\" --depth 1 https://github.com/MCGPPeters/cgal.git\n      [ -d tbp.monty ] || git clone --branch \"${MONTY_REF}\" --depth 1 https://github.com/MCGPPeters/tbp.monty.git\n      mkdir -p /home/__ADMIN_USER__/tbp/data /home/__ADMIN_USER__/tbp/results/monty/pretrained_models\n      cd /opt/cgal/docker\n      docker compose -f docker-compose.yml build monty\n      # Download YCB + pretrained models *inside* the image (host has no habitat-sim).\n      docker compose -f docker-compose.yml run --rm --entrypoint bash monty -lc 'micromamba run -n base /workspace/cgal/docker/download_ycb.sh'\n      SUITE=\"${SUITE}\" N_EVAL_EPOCHS=\"${N_EVAL_EPOCHS}\" docker compose -f docker-compose.yml up --abort-on-container-exit\n      if [ -n \"${RESULTS_SA}\" ]; then\n        az login --identity\n        az storage container create --account-name \"${RESULTS_SA}\" --name \"${RESULTS_CONTAINER}\" --auth-mode login || true\n        az storage blob upload-batch --account-name \"${RESULTS_SA}\" -d \"${RESULTS_CONTAINER}/$(hostname)/$(date -u +%Y%m%dT%H%M%SZ)\" -s /opt/cgal/docker/logs --auth-mode login\n      fi\nruncmd:\n  - DEBIAN_FRONTEND=noninteractive apt-get update\n  - DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg\n  - install -m 0755 -d /etc/apt/keyrings\n  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg\n  - chmod a+r /etc/apt/keyrings/docker.gpg\n  - echo \"deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable\" > /etc/apt/sources.list.d/docker.list\n  - apt-get update\n  - DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin\n  - systemctl enable --now docker\n  - usermod -aG docker __ADMIN_USER__\n  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash\n  - su - __ADMIN_USER__ -c \"nohup /usr/local/bin/run-cgal-bench.sh > /var/log/cgal-bench.log 2>&1 &\"\n",
+    "prefix": "[uniqueString(resourceGroup().id, deployment().name)]",
+    "vmName": "[format('cgal-bench-{0}', take(variables('prefix'), 6))]",
+    "customData": "[base64(replace(replace(replace(replace(replace(replace(replace(variables('$fxv#0'), '__CGAL_REF__', parameters('cgalRef')), '__MONTY_REF__', parameters('montyRef')), '__SUITE__', parameters('suite')), '__N_EVAL_EPOCHS__', parameters('nEvalEpochs')), '__RESULTS_SA__', parameters('resultsStorageAccount')), '__RESULTS_CONTAINER__', parameters('resultsContainer')), '__ADMIN_USER__', parameters('adminUsername')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}-vnet', variables('vmName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.20.0.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "10.20.0.0/27"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}-pip', variables('vmName'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('vmName')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}-nsg', variables('vmName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-ssh",
+            "properties": {
+              "priority": 100,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-01-01",
+      "name": "[format('{0}-nic', variables('vmName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('{0}-nsg', variables('vmName')))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('vmName'))), '2024-01-01').subnets[0].id]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName')))]"
+              },
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', format('{0}-nsg', variables('vmName')))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName')))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('vmName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-07-01",
+      "name": "[variables('vmName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "priority": "[if(parameters('useSpot'), 'Spot', 'Regular')]",
+        "evictionPolicy": "[if(parameters('useSpot'), 'Delete', null())]",
+        "billingProfile": "[if(parameters('useSpot'), createObject('maxPrice', parameters('spotMaxPrice')), null())]",
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[variables('customData')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                  "keyData": "[parameters('sshPublicKey')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "ubuntu-24_04-lts",
+            "sku": "server",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            },
+            "deleteOption": "Delete",
+            "diskSizeGB": 256
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vmName')))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vmName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "sshCommand": {
+      "type": "string",
+      "value": "[format('ssh {0}@{1}', parameters('adminUsername'), reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName'))), '2024-01-01').dnsSettings.fqdn)]"
+    },
+    "publicIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName'))), '2024-01-01').ipAddress]"
+    },
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName'))), '2024-01-01').dnsSettings.fqdn]"
+    },
+    "watchLog": {
+      "type": "string",
+      "value": "[format('ssh {0}@{1} tail -f /var/log/cgal-bench.log', parameters('adminUsername'), reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName'))), '2024-01-01').dnsSettings.fqdn)]"
+    },
+    "fetchResults": {
+      "type": "string",
+      "value": "[format('scp -r {0}@{1}:/opt/cgal/docker/logs ./azure-results', parameters('adminUsername'), reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('vmName'))), '2024-01-01').dnsSettings.fqdn)]"
+    }
+  }
+}

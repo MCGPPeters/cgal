@@ -61,80 +61,16 @@ param resultsContainer string = 'cgal-results'
 var prefix = uniqueString(resourceGroup().id, deployment().name)
 var vmName = 'cgal-bench-${take(prefix, 6)}'
 
-// Cloud-init script: rendered into the VM customData.
-var cloudInit = '''
-#cloud-config
-package_update: true
-package_upgrade: false
-packages:
-  - git
-  - curl
-  - jq
-  - ca-certificates
-  - gnupg
-  - lsb-release
-write_files:
-  - path: /etc/profile.d/cgal.sh
-    content: |
-      export CGAL_REF=${CGAL_REF}
-      export MONTY_REF=${MONTY_REF}
-      export SUITE=${SUITE}
-      export N_EVAL_EPOCHS=${N_EVAL_EPOCHS}
-      export RESULTS_SA=${RESULTS_SA}
-      export RESULTS_CONTAINER=${RESULTS_CONTAINER}
-  - path: /usr/local/bin/run-cgal-bench.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -euxo pipefail
-      source /etc/profile.d/cgal.sh
-      cd /opt
-      [ -d cgal ] || git clone --branch "${CGAL_REF}" --depth 1 https://github.com/MCGPPeters/cgal.git
-      [ -d tbp.monty ] || git clone --branch "${MONTY_REF}" --depth 1 https://github.com/MCGPPeters/tbp.monty.git
-      mkdir -p /home/${ADMIN_USER}/tbp/data /home/${ADMIN_USER}/tbp/results/monty/pretrained_models
-      cd /opt/cgal/docker
-      # Build the monty image first (it has habitat-sim baked in).
-      docker compose -f docker-compose.yml build monty
-      # Download YCB + pretrained models *inside* the image (host has no habitat-sim).
-      docker compose -f docker-compose.yml run --rm --entrypoint bash monty -lc 'micromamba run -n base /workspace/cgal/docker/download_ycb.sh'
-      SUITE="${SUITE}" N_EVAL_EPOCHS="${N_EVAL_EPOCHS}" docker compose -f docker-compose.yml up --abort-on-container-exit
-      if [ -n "${RESULTS_SA}" ]; then
-        az login --identity
-        az storage container create --account-name "${RESULTS_SA}" --name "${RESULTS_CONTAINER}" --auth-mode login || true
-        az storage blob upload-batch --account-name "${RESULTS_SA}" -d "${RESULTS_CONTAINER}/$(hostname)/$(date -u +%Y%m%dT%H%M%SZ)" -s /opt/cgal/docker/logs --auth-mode login
-      fi
-runcmd:
-  # NVIDIA driver + container toolkit
-  - distribution=$(. /etc/os-release; echo $ID$VERSION_ID)
-  - curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-  - curl -fsSL https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' > /etc/apt/sources.list.d/nvidia-container-toolkit.list
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-drivers-common nvidia-container-toolkit
-  - ubuntu-drivers autoinstall || true
-  # Docker engine
-  - install -m 0755 -d /etc/apt/keyrings
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  - echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  - systemctl enable --now docker
-  - usermod -aG docker ${ADMIN_USER}
-  - nvidia-ctk runtime configure --runtime=docker
-  - systemctl restart docker
-  # az cli for blob upload (optional)
-  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-  # Kick off the benchmark in the background so cloud-init returns
-  - su - ${ADMIN_USER} -c "nohup /usr/local/bin/run-cgal-bench.sh > /var/log/cgal-bench.log 2>&1 &"
-'''
-
-var customData = base64(replace(replace(replace(replace(replace(replace(replace(cloudInit,
-  '${CGAL_REF}', cgalRef),
-  '${MONTY_REF}', montyRef),
-  '${SUITE}', suite),
-  '${N_EVAL_EPOCHS}', nEvalEpochs),
-  '${RESULTS_SA}', resultsStorageAccount),
-  '${RESULTS_CONTAINER}', resultsContainer),
-  '${ADMIN_USER}', adminUsername))
+// Cloud-init script: loaded from external file to avoid Bicep interpolation
+// of bash ${VAR} references inside multi-line strings.
+var customData = base64(replace(replace(replace(replace(replace(replace(replace(loadTextContent('cloud-init.yaml'),
+  '__CGAL_REF__', cgalRef),
+  '__MONTY_REF__', montyRef),
+  '__SUITE__', suite),
+  '__N_EVAL_EPOCHS__', nEvalEpochs),
+  '__RESULTS_SA__', resultsStorageAccount),
+  '__RESULTS_CONTAINER__', resultsContainer),
+  '__ADMIN_USER__', adminUsername))
 
 // --------------------------------------------------------------------------
 // Networking
