@@ -147,14 +147,16 @@ SCP=(scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
 
 # ---- 5. Push bootstrap script and run it ----------------------------------
 say "uploading bootstrap script..."
-"${SCP[@]}" "${HERE}/bootstrap.sh" "ubuntu@${IP}:/tmp/bootstrap.sh"
+"${SCP[@]}" "${HERE}/bootstrap-native.sh" "ubuntu@${IP}:/tmp/bootstrap.sh"
 "${SSH[@]}" 'chmod +x /tmp/bootstrap.sh'
 
-say "starting benchmark (logs streamed below)..."
-"${SSH[@]}" \
-  "CGAL_REF='${CGAL_REF}' MONTY_REF='${MONTY_REF}' \
+say "starting benchmark in background on the VM (survives ssh disconnect)..."
+"${SSH[@]}" "nohup env CGAL_REF='${CGAL_REF}' MONTY_REF='${MONTY_REF}' \
    SUITE='${SUITE}' N_EVAL_EPOCHS='${N_EVAL_EPOCHS}' \
-   /tmp/bootstrap.sh 2>&1 | tee /tmp/cgal-bench.log"
+   /tmp/bootstrap.sh > /tmp/cgal-bench.log 2>&1 < /dev/null & echo started-pid=\$!"
+
+say "streaming /tmp/cgal-bench.log (Ctrl-C is safe — the run keeps going on the VM)..."
+"${SSH[@]}" 'tail -F /tmp/cgal-bench.log' || true
 
 # ---- 6. Pull results -------------------------------------------------------
 mkdir -p "${RESULTS_DIR}"
