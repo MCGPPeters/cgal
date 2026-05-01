@@ -89,12 +89,18 @@ run_one() {
         # would land at a stray top-level `monty:` key that the LM never
         # reads (silently no-op'd two prior runs), so the *full* package path
         # is required.
+        #
+        # Conservative defaults (post-stress regression). The original defaults
+        # (alpha=0.7, trust_min=0.1, gamma=0.05) over-corrected on the 5LM
+        # asymmetric-noise stress (-2.2% accuracy). New defaults: smaller alpha
+        # (mostly pass plasticity through), wider agreement tolerance, higher
+        # trust floor (cap down-weighting at 2x), slower trust learning.
         local LM_ARGS="++experiment.config.monty_config.learning_module_configs.learning_module_0.learning_module_args"
         overrides+=(
-            "${LM_ARGS}.cgal_consensus_gating={consensus_gated_plasticity:true}"
+            "${LM_ARGS}.cgal_consensus_gating={consensus_gated_plasticity:true,alpha:0.3,agreement_tolerance:0.2}"
             "${LM_ARGS}.cgal_novelty_detection={hypothesis_novelty_detection:true}"
             "${LM_ARGS}.cgal_salience_replay={salience_tagged_replay:true}"
-            "${LM_ARGS}.cgal_trust_weights={learned_trust_weights:true}"
+            "${LM_ARGS}.cgal_trust_weights={learned_trust_weights:true,trust_learning_rate:0.02,trust_min:0.5}"
         )
     fi
 
