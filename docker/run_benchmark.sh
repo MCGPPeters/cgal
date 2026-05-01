@@ -56,11 +56,16 @@ run_one() {
 
     local overrides=("experiment=${exp}" "${EXTRA[@]}" "++monty_logs_dir=${logdir}")
     if [[ "${cgal}" == "true" ]]; then
+        # The LM expects each cgal_* kwarg as a dict that becomes a *Config
+        # dataclass. Each config also has a master enable bool that defaults
+        # to False, so we must set it explicitly. Plain `=true` would be
+        # accepted by Hydra but would either no-op or raise on **bool unpack.
+        local LM_ARGS="++monty.learning_module_configs.learning_module_0.learning_module_args"
         overrides+=(
-            "++monty.learning_module_configs.learning_module_0.learning_module_args.cgal_consensus_gating=true"
-            "++monty.learning_module_configs.learning_module_0.learning_module_args.cgal_novelty_detection=true"
-            "++monty.learning_module_configs.learning_module_0.learning_module_args.cgal_salience_replay=true"
-            "++monty.learning_module_configs.learning_module_0.learning_module_args.cgal_trust_weights=true"
+            "${LM_ARGS}.cgal_consensus_gating={consensus_gated_plasticity:true}"
+            "${LM_ARGS}.cgal_novelty_detection={hypothesis_novelty_detection:true}"
+            "${LM_ARGS}.cgal_salience_replay={salience_tagged_replay:true}"
+            "${LM_ARGS}.cgal_trust_weights={learned_trust_weights:true}"
         )
     fi
 
